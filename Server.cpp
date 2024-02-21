@@ -49,7 +49,7 @@ struct client_socket_info *acceptNewConnection(int socket_fd) {     // accepts n
     return new_client_socket;
 }
 
-int broadcast(int total_chars, char *writeBuffer, int exception_socket_fd = -1);
+void broadcast(int total_chars, char *writeBuffer, int exception_socket_fd = -1);
 
 void *recvFromEachClientOnNewThread(void* argv) {
     struct client_socket_info *new_client_socket = (struct client_socket_info *)argv;
@@ -157,9 +157,12 @@ int main()
         memset(buffer, 0, sizeof(buffer));
         ssize_t total_chars = getline(&writeBuffer, &writeBufferSize, stdin);
         writeBuffer[total_chars - 1] = 0;           // to remove the '\n' from the end of the string(getline scans till it finds '\n')
+        if(strcmp(writeBuffer, quit) == 0) {
+            printf("[CLOSED]: Connection closed\n");
+            exit(EXIT_SUCCESS);
+        }
         sprintf(buffer, "[SERVER]: %s", writeBuffer);
-        int broadcast_res = broadcast(total_chars + 11, buffer);
-        if(broadcast_res == -1) break;
+        broadcast(total_chars + 11, buffer);
     }
 
     close(socket_fd);
@@ -167,14 +170,10 @@ int main()
     return 0;
 }
 
-int broadcast(int total_chars, char *buffer, int exception_socket_fd) {
+void broadcast(int total_chars, char *buffer, int exception_socket_fd) {
 
     // SEND TO ALL THE CLIENTS
-    if(total_chars > 0) {
-        if(strcmp(buffer, quit) == 0) {
-            printf("[CLOSED]: Connection closed\n");
-            return -1;
-        }
+    if(total_chars > 12) {
         struct client_socket_info client;
         for(int i = 0; i < acceptedClient.size(); i++) {
             client = acceptedClient[i];
@@ -188,6 +187,5 @@ int broadcast(int total_chars, char *buffer, int exception_socket_fd) {
             }
         }
     }
-    return 1;
 }
 
